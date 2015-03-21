@@ -1,5 +1,6 @@
 ﻿import observable = require("data/observable");
 import dialogs = require("ui/dialogs");
+import localSettings = require("local-settings");
 var everlive = require("./lib/everlive");
 
 interface ConferenceDay {
@@ -31,6 +32,38 @@ var conferenceDays: Array<ConferenceDay> = [
 ];
 var sessions: Array<SessionModel> = new Array<SessionModel>();
 
+var FAVOURITES = "FAVOURITES";
+var favourites: Array<string>;
+try {
+    favourites = <Array<string>>JSON.parse(localSettings.getString(FAVOURITES, "[]"));
+}
+catch (error) {
+    console.log("Error while retrieveing favourites: " + error);
+    favourites = new Array<string>();
+    updateFavourites()
+}
+
+function addToFavourites(session: SessionModel) {
+    if (favourites.indexOf(session.Id) < 0) {
+        favourites.push(session.Id);
+        updateFavourites();
+    }
+}
+
+function removeFromFavourites(session: SessionModel) {
+    var index = favourites.indexOf(session.Id);
+    if (index >= 0) {
+        favourites.splice(index, 1);
+        updateFavourites();
+    }
+}
+
+function updateFavourites() {
+    var newValue = JSON.stringify(favourites);
+    localSettings.setString(FAVOURITES, newValue);
+}
+
+
 var el = new everlive("mzacGkKPFlZUfbMq");
 var expandExp = {
     "speakers": true
@@ -41,8 +74,13 @@ el.data('NextSessions').expand(expandExp).get().then(
         var sessionsFromEvelive: Array<Session> = <Array<Session>> data.result;
 
         for (var i = 0; i < sessionsFromEvelive.length; i++) {
-            sessions.push(new SessionModel(sessionsFromEvelive[i]));
+            var newSession = new SessionModel(sessionsFromEvelive[i]);
+            if (favourites.indexOf(newSession.Id) >= 0) {
+                newSession.favorite = true;
+            }
+            sessions.push(newSession);
         }
+
         appModel.onDataLoaded();
 
     }, function (error) {
@@ -183,6 +221,16 @@ export class SessionModel extends observable.Observable implements Session {
         if (this._favorite !== value) {
             this._favorite = value;
             this.notify({ object: this, eventName: observable.knownEvents.propertyChange, propertyName: "favorite", value: this._favorite });
+        }
+    }
+
+    public toggleFavorite() {
+        this.favorite = !this.favorite;
+        if (this.favorite) {
+            addToFavourites(this);
+        }
+        else {
+            removeFromFavourites(this);
         }
     }
 }
