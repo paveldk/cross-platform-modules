@@ -1,5 +1,6 @@
 ﻿import types = require("utils/types");
 import definition = require("data/observable");
+import merge = require("utils/module-merge");
 
 interface ListenerEntry {
     callback: (data: definition.EventData) => void;
@@ -15,6 +16,10 @@ export class Observable implements definition.Observable {
 
     get typeName(): string {
         return types.getClass(this);
+    }
+
+    public init() {
+        Observable.apply(this, arguments);
     }
 
     public on(eventNames: string, callback: (data: definition.EventData) => void, thisArg?: any) {
@@ -166,4 +171,34 @@ export class Observable implements definition.Observable {
     public toString(): string {
         return this.typeName;
     }
+
+    public static extends(proto: Object): Observable {
+        var fn,
+            member,
+            that = this,
+            Base = function () {},
+            subclass = proto && proto.init ? proto.init : function () {
+                that.apply(this, arguments);
+            };
+
+        Base.prototype = that.prototype;
+        fn = subclass.fn = subclass.prototype = new Base();
+
+        for (member in proto) {
+            if (proto[member] !== null && proto[member].constructor === Object) {
+                fn[member] = {};
+                fn[member] = merge(Base.prototype[member], fn[member], true);
+                fn[member] = merge(proto[member], fn[member], true);
+            } else {
+                fn[member] = proto[member];
+            }
+        }
+
+        fn.constructor = subclass;
+        subclass.extend = that.extend;
+
+        return subclass;
+    }
+
+    public static fn = Observable.prototype;
 }

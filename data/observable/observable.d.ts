@@ -50,6 +50,16 @@ declare module "data/observable" {
         typeName: string;
 
         /**
+         * Alias to Observable.prototype
+         */
+        static fn;
+
+        /**
+         * The `init` method will be called when a new instance is created
+         */
+        init();
+
+        /**
          * Shortcut alias to the addEventListener method.
          */
         on(eventNames: string, callback: (data: EventData) => void, thisArg?: any);
@@ -96,6 +106,13 @@ declare module "data/observable" {
          * @param eventName The name of the event to check for.
          */
         hasListeners(eventName: string): boolean;
+
+        /**
+         * Extends Observable with new methods. Allows inheritance.
+         * @param proto A key/value pair of all additional methods that the new class will have.
+         * @returns extended Observable
+         */
+        static extends(proto: Object): Observable;
 
         //@private
         /**
